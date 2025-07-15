@@ -11,6 +11,14 @@ if "opskrifter" not in st.session_state:
 if "ingrediens_rækker" not in st.session_state:
     st.session_state.ingrediens_rækker = 1
 
+# Hent ingrediensdatabase hvis tilgængelig
+if "ingredienser" in st.session_state:
+    ingrediens_df = st.session_state.ingredienser.copy()
+    ingrediens_db = ingrediens_df["Navn"].tolist()
+else:
+    ingrediens_df = pd.DataFrame()
+    ingrediens_db = []
+
 # --- ØVERSTE LINJE MED SØG OG TILFØJ ---
 st.markdown("""
     <style>
@@ -45,7 +53,9 @@ if st.session_state.get("vis_tilfoej_formular"):
         for i in range(st.session_state.ingrediens_rækker):
             col1, col2 = st.columns([3, 1])
             with col1:
-                ingrediens = st.text_input(f"Ingrediens {i+1}", key=f"ing_{i}")
+                ingrediens = st.selectbox(
+                    f"Ingrediens {i+1}", options=ingrediens_db, key=f"ing_{i}", index=0 if ingrediens_db else None
+                ) if ingrediens_db else st.text_input(f"Ingrediens {i+1}", key=f"ing_{i}")
             with col2:
                 mængde = st.number_input(f"Gram", key=f"g_{i}", min_value=0, step=10)
             if ingrediens:
@@ -101,9 +111,9 @@ if sog:
 cols = st.columns(4)
 for idx, opskrift in enumerate(filtered):
     with cols[idx % 4]:
-        try:
+        if os.path.exists(opskrift["billede"]):
             st.image(opskrift["billede"], caption=opskrift["navn"], use_column_width=True)
-        except:
+        else:
             st.warning("Billedet kunne ikke vises.")
         if st.button(f"Se detaljer – {opskrift['navn']}", key=f"vis_{idx}"):
             st.session_state.valgt_opskrift = opskrift
@@ -113,11 +123,41 @@ if "valgt_opskrift" in st.session_state:
     st.markdown("---")
     o = st.session_state.valgt_opskrift
     st.subheader(o["navn"])
-    st.image(o["billede"], use_column_width=True)
-    st.write(f"**Kategori:** {o['kategori']}")
+    try:
+        if os.path.exists(o["billede"]):
+            st.image(o["billede"], use_column_width=True)
+        else:
+            st.warning("Billedet kunne ikke vises.")
+    except:
+        st.warning("Billedet kunne ikke vises.")
 
+    st.write(f"**Kategori:** {o['kategori']}")
     df_ingredienser = pd.DataFrame(o["ingredienser"], columns=["Ingrediens", "Mængde (g)"])
     st.table(df_ingredienser)
+
+    # --- Beregn makroer ---
+    if not ingrediens_df.empty:
+        merged = df_ingredienser.merge(ingrediens_df, how="left", left_on="Ingrediens", right_on="Navn")
+        merged["Kalorier"] = merged["Mængde (g)"] * merged["Kalorier pr. 100g"] / 100
+        merged["Protein"] = merged["Mængde (g)"] * merged["Protein pr. 100g"] / 100
+        merged["Fedt"] = merged["Mængde (g)"] * merged["Fedt pr. 100g"] / 100
+        merged["Kulhydrat"] = merged["Mængde (g)"] * merged["Kulhydrat pr. 100g"] / 100
+
+        total = merged[["Kalorier", "Protein", "Fedt", "Kulhydrat"]].sum()
+        samlet_vaegt = df_ingredienser["Mængde (g)"].sum()
+
+        st.write("**Makroer (samlet):**")
+        st.write(f"Kalorier: {total['Kalorier']:.0f} kcal")
+        st.write(f"Protein: {total['Protein']:.1f} g")
+        st.write(f"Fedt: {total['Fedt']:.1f} g")
+        st.write(f"Kulhydrat: {total['Kulhydrat']:.1f} g")
+
+        if samlet_vaegt > 0:
+            st.write("**Makroer pr. 100g:**")
+            st.write(f"Kalorier: {100 * total['Kalorier'] / samlet_vaegt:.0f} kcal")
+            st.write(f"Protein: {100 * total['Protein'] / samlet_vaegt:.1f} g")
+            st.write(f"Fedt: {100 * total['Fedt'] / samlet_vaegt:.1f} g")
+            st.write(f"Kulhydrat: {100 * total['Kulhydrat'] / samlet_vaegt:.1f} g")
 
     if st.button("🔙 Tilbage"):
         del st.session_state.valgt_opskrift
