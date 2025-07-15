@@ -187,4 +187,9 @@ else:
 
 st.subheader("Ingrediensoversigt")
 df_visning = st.session_state.ingredienser.sort_values("Navn").reset_index(drop=True)
-st.dataframe(df_visning, use_container_width=True)
+st.dataframe(
+    st.session_state.ingredienser.sort_values("Navn"),
+    use_container_width=True,
+    hide_index=True
+)
+
