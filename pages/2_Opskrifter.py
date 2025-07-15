@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import re
 from PIL import Image
+from difflib import get_close_matches
 
 st.set_page_config(page_title="Opskrifter", layout="wide")
 
@@ -14,21 +15,13 @@ if "ingrediens_rækker" not in st.session_state:
 # Hent ingrediensdatabase hvis tilgængelig
 if "ingredienser" in st.session_state:
     ingrediens_df = st.session_state.ingredienser.copy()
-    ingrediens_df["Navn_lower"] = ingrediens_df["Navn"].str.lower()
+    ingrediens_df["Navn_clean"] = ingrediens_df["Navn"].str.lower().str.strip()
     ingrediens_db = ingrediens_df["Navn"].tolist()
 else:
     ingrediens_df = pd.DataFrame()
     ingrediens_db = []
 
 # --- ØVERSTE LINJE MED SØG OG TILFØJ ---
-st.markdown("""
-    <style>
-        .center-input .stTextInput > div > div > input {
-            text-align: center;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     sog = st.text_input("", placeholder="🔍 Søg efter opskrift", label_visibility="collapsed")
@@ -54,17 +47,11 @@ if st.session_state.get("vis_tilfoej_formular"):
         for i in range(st.session_state.ingrediens_rækker):
             col1, col2 = st.columns([3, 1])
             with col1:
-                valgt_ingred = st.selectbox(
-                    f"Ingrediens {i+1}",
-                    options=ingrediens_db + ["(Skriv ny ingrediens)"],
-                    key=f"ingrediens_{i}"
-                )
-                if valgt_ingred == "(Skriv ny ingrediens)":
-                    valgt_ingred = st.text_input(f"Ny ingrediens {i+1}", key=f"ny_ingred_{i}")
-
+                input_txt = st.text_input(f"Ingrediens {i+1}", key=f"ingrediens_input_{i}")
+                forslag = get_close_matches(input_txt.strip().lower(), [n.lower() for n in ingrediens_db], n=5, cutoff=0.3)
+                valgt_ingred = st.selectbox("Vælg fra forslag", forslag if forslag else [input_txt], key=f"forslag_{i}")
             with col2:
                 mængde = st.number_input(f"Gram", key=f"g_{i}", min_value=0, step=10)
-
             if valgt_ingred:
                 ingrediens_liste.append((valgt_ingred, mængde))
 
@@ -144,12 +131,12 @@ if "valgt_opskrift" in st.session_state:
 
     # --- Beregn makroer ---
     if not ingrediens_df.empty:
-        df_ingredienser["Ingrediens_lower"] = df_ingredienser["Ingrediens"].str.lower()
+        df_ingredienser["Ingrediens_clean"] = df_ingredienser["Ingrediens"].str.lower().str.strip()
         merged = df_ingredienser.merge(
             ingrediens_df,
             how="left",
-            left_on="Ingrediens_lower",
-            right_on="Navn_lower"
+            left_on="Ingrediens_clean",
+            right_on="Navn_clean"
         )
         missing = merged[merged["Navn"].isna()]
         if not missing.empty:
