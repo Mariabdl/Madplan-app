@@ -55,9 +55,10 @@ if "opskrifter" not in st.session_state:
     st.session_state.opskrifter = []
 
 st.subheader("📚 Gennemse opskrifter")
+sog = st.text_input("🔍 Søg opskrift")
 gyldige_opskrifter = [o for o in st.session_state.opskrifter if isinstance(o, dict) and "kategori" in o]
 kategori_valg = ["Alle"] + sorted(list(set([o["kategori"] for o in gyldige_opskrifter])))
-selected_kategori = st.selectbox("Vælg kategori", kategori_valg)selected_kategori = st.selectbox("Vælg kategori", ["Alle"] + sorted(list(set([o["kategori"] for o in st.session_state.opskrifter]))))
+selected_kategori = st.selectbox("Vælg kategori", kategori_valg)
 
 col1, col2, col3 = st.columns(3)
 cols = [col1, col2, col3]
