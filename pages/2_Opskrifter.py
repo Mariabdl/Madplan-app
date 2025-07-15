@@ -53,13 +53,16 @@ if st.session_state.get("vis_tilfoej_formular"):
         for i in range(st.session_state.ingrediens_rækker):
             col1, col2 = st.columns([3, 1])
             with col1:
-                ingrediens = st.selectbox(
-                    f"Ingrediens {i+1}", options=ingrediens_db, key=f"ing_{i}", index=0 if ingrediens_db else None
-                ) if ingrediens_db else st.text_input(f"Ingrediens {i+1}", key=f"ing_{i}")
+                tekst_input = st.text_input(f"Ingrediens {i+1}", key=f"ing_{i}")
+                matches = [x for x in ingrediens_db if tekst_input.lower() in x.lower()] if len(tekst_input) >= 2 else []
+                if matches:
+                    valgt_match = st.selectbox("Vælg fra forslag", matches, key=f"match_{i}", index=0)
+                else:
+                    valgt_match = tekst_input
             with col2:
                 mængde = st.number_input(f"Gram", key=f"g_{i}", min_value=0, step=10)
-            if ingrediens:
-                ingrediens_liste.append((ingrediens, mængde))
+            if valgt_match:
+                ingrediens_liste.append((valgt_match, mængde))
 
         gem_opskrift = st.form_submit_button("Gem opskrift")
 
