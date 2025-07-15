@@ -8,6 +8,8 @@ st.set_page_config(page_title="Opskrifter", layout="wide")
 
 if "opskrifter" not in st.session_state:
     st.session_state.opskrifter = []
+if "ingrediens_rækker" not in st.session_state:
+    st.session_state.ingrediens_rækker = 1
 
 # --- ØVERSTE LINJE MED SØG OG TILFØJ ---
 st.markdown("""
@@ -28,6 +30,7 @@ with col3:
 # --- FORMULAR TIL AT TILFØJE OPSKRIFT ---
 if st.session_state.get("vis_tilfoej_formular"):
     st.markdown("### Tilføj ny opskrift")
+
     with st.form("ny_opskrift_form"):
         navn = st.text_input("Navn på opskrift")
         kategori = st.selectbox("Vælg kategori", [
@@ -38,8 +41,6 @@ if st.session_state.get("vis_tilfoej_formular"):
 
         st.write("Ingredienser og mængder")
         ingrediens_liste = []
-        if "ingrediens_rækker" not in st.session_state:
-            st.session_state.ingrediens_rækker = 1
 
         for i in range(st.session_state.ingrediens_rækker):
             col1, col2 = st.columns([3, 1])
@@ -49,9 +50,6 @@ if st.session_state.get("vis_tilfoej_formular"):
                 mængde = st.number_input(f"Gram", key=f"g_{i}", min_value=0, step=10)
             if ingrediens:
                 ingrediens_liste.append((ingrediens, mængde))
-
-        if st.button("➕ Tilføj ingrediensrække"):
-            st.session_state.ingrediens_rækker += 1
 
         gem_opskrift = st.form_submit_button("Gem opskrift")
 
@@ -74,6 +72,9 @@ if st.session_state.get("vis_tilfoej_formular"):
             st.success("Opskrift tilføjet!")
             st.session_state.vis_tilfoej_formular = False
             st.session_state.ingrediens_rækker = 1
+
+    if st.button("➕ Tilføj ingrediensrække"):
+        st.session_state.ingrediens_rækker += 1
 
 st.markdown("---")
 
