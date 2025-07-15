@@ -14,6 +14,7 @@ if "ingrediens_rækker" not in st.session_state:
 # Hent ingrediensdatabase hvis tilgængelig
 if "ingredienser" in st.session_state:
     ingrediens_df = st.session_state.ingredienser.copy()
+    ingrediens_df["Navn_lower"] = ingrediens_df["Navn"].str.lower()
     ingrediens_db = ingrediens_df["Navn"].tolist()
 else:
     ingrediens_df = pd.DataFrame()
@@ -53,14 +54,13 @@ if st.session_state.get("vis_tilfoej_formular"):
         for i in range(st.session_state.ingrediens_rækker):
             col1, col2 = st.columns([3, 1])
             with col1:
-                input_tekst = st.text_input(f"Ingrediens {i+1}", key=f"ing_input_{i}")
-                forslag = [x for x in ingrediens_db if input_tekst.lower() in x.lower()] if input_tekst else []
-
-                if forslag:
-                    valgt_fra_forslag = st.selectbox("Vælg fra forslag", forslag, key=f"forslag_{i}", index=0)
-                    valgt_ingred = valgt_fra_forslag
-                else:
-                    valgt_ingred = input_tekst
+                valgt_ingred = st.selectbox(
+                    f"Ingrediens {i+1}",
+                    options=ingrediens_db + ["(Skriv ny ingrediens)"],
+                    key=f"ingrediens_{i}"
+                )
+                if valgt_ingred == "(Skriv ny ingrediens)":
+                    valgt_ingred = st.text_input(f"Ny ingrediens {i+1}", key=f"ny_ingred_{i}")
 
             with col2:
                 mængde = st.number_input(f"Gram", key=f"g_{i}", min_value=0, step=10)
@@ -144,12 +144,18 @@ if "valgt_opskrift" in st.session_state:
 
     # --- Beregn makroer ---
     if not ingrediens_df.empty:
-        manglende = df_ingredienser[~df_ingredienser["Ingrediens"].isin(ingrediens_df["Navn"])]
-        if not manglende.empty:
+        df_ingredienser["Ingrediens_lower"] = df_ingredienser["Ingrediens"].str.lower()
+        merged = df_ingredienser.merge(
+            ingrediens_df,
+            how="left",
+            left_on="Ingrediens_lower",
+            right_on="Navn_lower"
+        )
+        missing = merged[merged["Navn"].isna()]
+        if not missing.empty:
             st.warning("Følgende ingredienser findes ikke i databasen og er ikke med i beregningen:")
-            st.write(manglende["Ingrediens"].tolist())
+            st.write(missing["Ingrediens"].tolist())
 
-        merged = df_ingredienser.merge(ingrediens_df, how="left", left_on="Ingrediens", right_on="Navn")
         merged["Kalorier"] = merged["Mængde (g)"] * merged["Kalorier pr. 100g"] / 100
         merged["Protein"] = merged["Mængde (g)"] * merged["Protein pr. 100g"] / 100
         merged["Fedt"] = merged["Mængde (g)"] * merged["Fedt pr. 100g"] / 100
