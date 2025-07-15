@@ -186,4 +186,5 @@ else:
         st.success("Ingrediens tilføjet!")
 
 st.subheader("Ingrediensoversigt")
-st.dataframe(st.session_state.ingredienser.sort_values("Navn").reset_index(drop=True))
+df_visning = st.session_state.ingredienser.sort_values("Navn").reset_index(drop=True)
+st.dataframe(df_visning, use_container_width=True)
